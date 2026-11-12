@@ -10,7 +10,7 @@ client asks for everything after the last number it saw.
 
 ```json
 { "op": "create", "type": "org.example.note#0", "id": "6f1c2b9e-…", "seq": 431,
-  "ts": "2026-11-12T09:21:03.250Z", "value": { "text": "buy milk" } }
+  "ts": 1794475263250, "value": { "text": "buy milk" } }
 ```
 
 - `op`: `create`, `update` or `delete`. A delete has no `value`; the server keeps a tombstone.
@@ -18,7 +18,7 @@ client asks for everything after the last number it saw.
   two copies merge.
 - `id`: unique within the type.
 - `seq`: set by the server, one counter per store.
-- `ts`: when the change was made, by the device's clock, in UTC with milliseconds.
+- `ts`: when the change was made, by the device's clock, in Unix milliseconds.
 
 A breaking change to a type gets a new version, which is a separate type. Clients leave
 records of types they don't know untouched.
@@ -61,9 +61,9 @@ again with `since=next` while `more` is true. `op` is relative to `since`:
 
 ```json
 { "records": [
-  { "op": "create", "type": "…", "id": "…", "ts": "…", "value": { … } },
-  { "op": "update", "type": "…", "id": "…", "base": 412, "ts": "…", "value": { … } },
-  { "op": "delete", "type": "…", "id": "…", "base": 412, "ts": "…" } ] }
+  { "op": "create", "type": "…", "id": "…", "ts": …, "value": { … } },
+  { "op": "update", "type": "…", "id": "…", "base": 412, "ts": …, "value": { … } },
+  { "op": "delete", "type": "…", "id": "…", "base": 412, "ts": … } ] }
 ```
 
 A `create` succeeds over nothing or a tombstone. An `update` or `delete` succeeds only if `base`
@@ -71,7 +71,7 @@ is still the record's latest `seq`.
 
 ```json
 { "written": [ { "type": "…", "id": "…", "seq": 435 } ],
-  "conflicts": [ { "op": "update", "type": "…", "id": "…", "seq": 420, "ts": "…", "value": { … } } ],
+  "conflicts": [ { "op": "update", "type": "…", "id": "…", "seq": 420, "ts": …, "value": { … } } ],
   "refused": [ { "type": "…", "id": "…", "error": "not-found" } ] }
 ```
 
@@ -86,7 +86,7 @@ the `seq`, so `Last-Event-ID` resumes.
 ```
 id: 435
 event: record
-data: {"op":"update","type":"org.example.note#0","id":"…","seq":435,"ts":"…","value":{…}}
+data: {"op":"update","type":"org.example.note#0","id":"…","seq":435,"ts":…,"value":{…}}
 ```
 
 ## Tokens
@@ -105,7 +105,7 @@ CREATE TABLE records (
   id          TEXT    NOT NULL,
   seq         INTEGER NOT NULL UNIQUE,
   created_seq INTEGER NOT NULL,
-  ts          TEXT    NOT NULL,
+  ts          INTEGER NOT NULL,
   deleted     INTEGER NOT NULL,
   value       TEXT,
   PRIMARY KEY (type, id)
