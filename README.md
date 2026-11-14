@@ -1,11 +1,10 @@
 # smallsync
 
-A protocol for syncing typed JSON records through a server. Draft, version 0.
+A protocol for syncing one user's typed JSON records through a server. Draft, version 0.
 
-A store belongs to one user and is an append-only log. Each entry creates, updates or deletes
-one record, which has a type, an id and a JSON value. Several apps can share a store, each under
-its own types. The server checks each entry against its record before appending it, so the log
-holds only changes that applied, and it folds entries older than a month.
+A store is an append-only log. Each entry creates, updates or deletes a record, which has a
+type, an id and a JSON value. Apps share a store by using different types. The server appends
+only entries that apply, and folds entries older than a month.
 
 ## Entries
 
@@ -19,53 +18,45 @@ holds only changes that applied, and it folds entries older than a month.
     { "op": "replace", "path": "/done", "value": true } ] }
 ```
 
-- `seq`: set by the server, one counter per store.
-- `op`: `create`, `update` or `delete`.
-- `value`: the whole value for a `create`, a [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902)
-  for an `update`, absent for a `delete`.
-- `type`: a reverse domain name and a version. Its owner defines the value and the ids.
+- `seq`: the store's counter, set by the server.
+- `op`: `create` with the whole value, `update` with a
+  [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902), or `delete` with no value.
+- `type`: a reverse domain name and a version. A breaking change is a new version, so a new type.
 - `id`: unique within the type.
-- `at`: set by the server when it appends the entry, in Unix milliseconds.
+- `at`: when the server appended the entry, in Unix milliseconds.
 
-A breaking change to a type gets a new version, which is a separate type. Clients leave
-records of types they don't know untouched.
+Clients leave records of types they don't know alone.
 
 ## Applying entries
 
-The server applies each pushed entry to its record and appends only the ones that apply:
+The server refuses an entry that doesn't apply:
 
-- A `create` applies only if the record doesn't exist or is deleted.
-- An `update` applies only if the record exists and every operation in its patch succeeds.
-- A `delete` applies only if the record exists.
+- `create` needs the record to be missing or deleted.
+- `update` needs the record to exist and every operation in the patch to succeed.
+- `delete` needs the record to exist.
 
-An update tests the current value of every path it replaces or removes, so it applies only to
-the version its author saw.
+An update tests every path it replaces or removes, so it applies only to the version its author
+saw. Array indexes shift when another entry inserts or removes, so data that two devices may edit
+at once, like a set's members, belongs in separate records.
 
-Clients apply pulled entries in `seq` order as they come. A client keeps its own unpushed
-entries applied on top of what it has pulled until the push answers. One that was refused was
-written against a version that has since changed: the client pulls, then redoes the change on
-the current record or asks the user.
-
-Array indexes shift when an earlier entry inserts or removes, so data that two devices may edit
-at once, like the members of a set, belongs in separate records.
+Clients apply pulled entries in `seq` order and keep their unpushed ones on top until the push
+answers. When one is refused, the client pulls and redoes the change, or asks the user.
 
 ## History
 
-The server keeps entries for at least `history` days, given by `GET /`. Once a day it folds each
-record's older entries into one `create` holding the value they add up to, with the `seq` and
-`at` of the newest of them. A record that was deleted by then loses its older entries
-altogether.
+The server keeps `history` days of entries. Once a day it folds each record's older entries into
+one `create` holding their combined value, with the `seq` and `at` of the newest. A record that
+was deleted by then loses them all.
 
-A new device pulls from `0`: one `create` per record, then the recent changes. A device whose
-last pull is older than `history` days does the same and rebuilds its records, keeping its
-unpushed entries. A device that pulled more recently never sees a folded entry, since
-everything folded was already behind its last pull.
+A new device pulls from `0`. So does a device whose last pull is older than `history` days, which
+rebuilds its records and keeps its unpushed entries. Every other device has already pulled
+whatever gets folded.
 
 ## API
 
-Paths are relative to the store's URL. JSON in and out, `Authorization: Bearer <token>` on
-every request, and `#` written as `%23` in query strings. Web clients on another origin need the
-server to allow the `Authorization` header through CORS.
+Paths are relative to the store's URL. Bodies are JSON, every request carries
+`Authorization: Bearer <token>`, and `#` is `%23` in query strings. Web clients on another origin
+need CORS to allow `Authorization`.
 
 Errors are `{ "error": "…", "message": "…" }` with `400`, `401`, `403` or `413`.
 
@@ -76,8 +67,7 @@ Errors are `{ "error": "…", "message": "…" }` with `400`, `401`, `403` or `4
   "read": ["*"], "write": ["org.example.note#0"] }
 ```
 
-Protocol versions, the days of history kept, whether `/subscribe` exists, and the types the
-token may read and write.
+`read` and `write` are the types the token allows.
 
 ### `GET /pull?since=<seq>&types=<a,b>&limit=<n>`
 
@@ -85,8 +75,8 @@ token may read and write.
 { "entries": [ … ] }
 ```
 
-Entries after `since` (default `0`) in `seq` order. Pull again from the last `seq` received
-until a page comes back empty.
+Entries after `since` (default `0`) in `seq` order. Pull again from the last `seq` until a page
+comes back empty.
 
 ### `POST /push`
 
@@ -96,8 +86,7 @@ until a page comes back empty.
   { "op": "delete", "type": "org.example.note#0", "id": "…" } ] }
 ```
 
-The server applies the entries in order and answers for each, in the same order, with the `seq`
-it was appended at or the reason it was refused:
+Entries apply in order, and each gets its `seq` or the reason it was refused:
 
 ```json
 { "results": [
@@ -105,12 +94,12 @@ it was appended at or the reason it was refused:
   { "error": "conflict", "message": "record does not exist" } ] }
 ```
 
-A type the token may not write fails the whole push with `403`.
+A type the token can't write fails the whole push with `403`.
 
 ### `GET /subscribe?since=<seq>&types=<a,b>`
 
-Server-sent events: what `/pull` would return, then each entry as it is appended. The event id
-is the `seq`, so `Last-Event-ID` resumes.
+Server-sent events: what `/pull` returns, then each new entry. The event id is the `seq`, so
+`Last-Event-ID` resumes.
 
 ```
 id: 437
@@ -120,11 +109,10 @@ data: {"seq":437,"op":"update","type":"org.example.note#0","id":"…","at":17944
 
 ## Tokens
 
-The server decides how tokens are issued: static tokens, or OIDC access tokens checked for
-signature, `iss`, `aud` and `exp`. A `401` carries
-`WWW-Authenticate: Bearer resource_metadata="…"` ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728))
-so a client can find the issuer. Scopes are `read:<type>`, `write:<type>`, `read:*` and
-`write:*`.
+Static tokens or OIDC access tokens checked for signature, `iss`, `aud` and `exp`, as the server
+chooses. A `401` carries `WWW-Authenticate: Bearer resource_metadata="…"`
+([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)) so a client can find the issuer. Scopes are
+`read:<type>`, `write:<type>`, `read:*` and `write:*`.
 
 ## Servers
 
@@ -140,9 +128,8 @@ CREATE TABLE log (
 CREATE INDEX log_record ON log (type, id, seq);
 ```
 
-A push reads the record's entries by `type` and `id`, applies them, checks the new entry and
-`INSERT`s it. A pull is a `SELECT` by `seq`. Folding a record is a `DELETE` of its older
-entries and an `UPDATE` of the newest into the `create`.
+A push reads the record's entries, applies them, checks the new entry and inserts it. A pull
+selects by `seq`. Folding deletes a record's older entries and turns the newest into the `create`.
 
 ## Open questions
 
