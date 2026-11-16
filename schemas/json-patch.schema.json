@@ -1,0 +1,119 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "JSON Patch (RFC 6902)",
+	"type": "array",
+	"items": {
+		"oneOf": [
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path",
+					"value"
+				],
+				"properties": {
+					"op": {
+						"const": "add"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					},
+					"value": {}
+				}
+			},
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path"
+				],
+				"properties": {
+					"op": {
+						"const": "remove"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					}
+				}
+			},
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path",
+					"value"
+				],
+				"properties": {
+					"op": {
+						"const": "replace"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					},
+					"value": {}
+				}
+			},
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path",
+					"from"
+				],
+				"properties": {
+					"op": {
+						"const": "move"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					},
+					"from": {
+						"$ref": "#/$defs/pointer"
+					}
+				}
+			},
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path",
+					"from"
+				],
+				"properties": {
+					"op": {
+						"const": "copy"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					},
+					"from": {
+						"$ref": "#/$defs/pointer"
+					}
+				}
+			},
+			{
+				"type": "object",
+				"required": [
+					"op",
+					"path",
+					"value"
+				],
+				"properties": {
+					"op": {
+						"const": "test"
+					},
+					"path": {
+						"$ref": "#/$defs/pointer"
+					},
+					"value": {}
+				}
+			}
+		]
+	},
+	"$defs": {
+		"pointer": {
+			"type": "string",
+			"pattern": "^(/([^~/]|~[01])*)*$"
+		}
+	}
+}

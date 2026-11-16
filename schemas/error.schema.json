@@ -1,0 +1,18 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Error",
+	"type": "object",
+	"required": [
+		"error",
+		"message"
+	],
+	"properties": {
+		"error": {
+			"type": "string"
+		},
+		"message": {
+			"type": "string"
+		}
+	},
+	"additionalProperties": false
+}

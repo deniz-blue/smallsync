@@ -1,0 +1,18 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Pull",
+	"description": "GET /pull",
+	"type": "object",
+	"required": [
+		"entries"
+	],
+	"properties": {
+		"entries": {
+			"type": "array",
+			"items": {
+				"$ref": "entry.schema.json"
+			}
+		}
+	},
+	"additionalProperties": false
+}

@@ -1,0 +1,35 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Push response",
+	"description": "POST /push, one result per pushed entry in the same order.",
+	"type": "object",
+	"required": [
+		"results"
+	],
+	"properties": {
+		"results": {
+			"type": "array",
+			"items": {
+				"oneOf": [
+					{
+						"type": "object",
+						"required": [
+							"seq"
+						],
+						"properties": {
+							"seq": {
+								"type": "integer",
+								"minimum": 1
+							}
+						},
+						"additionalProperties": false
+					},
+					{
+						"$ref": "error.schema.json"
+					}
+				]
+			}
+		}
+	},
+	"additionalProperties": false
+}

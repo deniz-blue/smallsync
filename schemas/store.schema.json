@@ -1,0 +1,58 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Store",
+	"description": "GET /",
+	"type": "object",
+	"required": [
+		"versions",
+		"history",
+		"subscribe",
+		"read",
+		"write"
+	],
+	"properties": {
+		"versions": {
+			"type": "array",
+			"items": {
+				"type": "integer",
+				"minimum": 0
+			},
+			"minItems": 1
+		},
+		"history": {
+			"type": "integer",
+			"minimum": 1,
+			"description": "Days of entries the server keeps before folding."
+		},
+		"subscribe": {
+			"type": "boolean"
+		},
+		"read": {
+			"type": "array",
+			"items": {
+				"anyOf": [
+					{
+						"const": "*"
+					},
+					{
+						"$ref": "record-type.schema.json"
+					}
+				]
+			}
+		},
+		"write": {
+			"type": "array",
+			"items": {
+				"anyOf": [
+					{
+						"const": "*"
+					},
+					{
+						"$ref": "record-type.schema.json"
+					}
+				]
+			}
+		}
+	},
+	"additionalProperties": false
+}

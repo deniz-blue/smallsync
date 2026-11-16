@@ -1,0 +1,19 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Push request",
+	"description": "POST /push",
+	"type": "object",
+	"required": [
+		"entries"
+	],
+	"properties": {
+		"entries": {
+			"type": "array",
+			"items": {
+				"$ref": "new-entry.schema.json"
+			},
+			"minItems": 1
+		}
+	},
+	"additionalProperties": false
+}

@@ -1,0 +1,301 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "smallsync",
+		"version": "0",
+		"description": "Sync one user's typed JSON records through a server. See README.md."
+	},
+	"jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+	"servers": [
+		{
+			"url": "{store}",
+			"variables": {
+				"store": {
+					"default": "http://localhost:8765"
+				}
+			}
+		}
+	],
+	"security": [
+		{
+			"bearer": []
+		}
+	],
+	"paths": {
+		"/": {
+			"get": {
+				"operationId": "getStore",
+				"summary": "Protocol versions, history, subscribe support and the token's types",
+				"responses": {
+					"200": {
+						"description": "The store",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/store.schema.json"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					}
+				}
+			}
+		},
+		"/pull": {
+			"get": {
+				"operationId": "pull",
+				"summary": "Entries after a seq, in seq order",
+				"parameters": [
+					{
+						"name": "since",
+						"in": "query",
+						"required": false,
+						"description": "Entries after this seq.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0,
+							"default": 0
+						}
+					},
+					{
+						"name": "types",
+						"in": "query",
+						"required": false,
+						"style": "form",
+						"explode": false,
+						"description": "Only these types. `#` is written `%23`.",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "schemas/record-type.schema.json"
+							}
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "A page of entries; empty when caught up",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/pull.schema.json"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad query",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"description": "A type the token may not read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/push": {
+			"post": {
+				"operationId": "push",
+				"summary": "Apply entries in order and append the ones that apply",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "schemas/push-request.schema.json"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "One result per entry, in order",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/push-response.schema.json"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Not a valid push",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"description": "A type the token may not write; nothing was applied",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					},
+					"413": {
+						"description": "Too large",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/subscribe": {
+			"get": {
+				"operationId": "subscribe",
+				"summary": "Server-sent events: what /pull returns, then each new entry",
+				"description": "Each event is `event: entry`, its id the entry's seq and its data an entry (schemas/entry.schema.json). `Last-Event-ID` resumes after that seq.",
+				"parameters": [
+					{
+						"name": "since",
+						"in": "query",
+						"required": false,
+						"description": "Entries after this seq.",
+						"schema": {
+							"type": "integer",
+							"minimum": 0,
+							"default": 0
+						}
+					},
+					{
+						"name": "types",
+						"in": "query",
+						"required": false,
+						"style": "form",
+						"explode": false,
+						"description": "Only these types. `#` is written `%23`.",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "schemas/record-type.schema.json"
+							}
+						}
+					},
+					{
+						"name": "Last-Event-ID",
+						"in": "header",
+						"required": false,
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "An event stream",
+						"content": {
+							"text/event-stream": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad query",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					},
+					"401": {
+						"$ref": "#/components/responses/Unauthorized"
+					},
+					"403": {
+						"description": "A type the token may not read",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "This server has no /subscribe",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "schemas/error.schema.json"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearer": {
+				"type": "http",
+				"scheme": "bearer",
+				"description": "A static token or an OIDC access token, as the server chooses."
+			}
+		},
+		"responses": {
+			"Unauthorized": {
+				"description": "Missing or bad token. May carry `WWW-Authenticate: Bearer resource_metadata=\"…\"` (RFC 9728).",
+				"headers": {
+					"WWW-Authenticate": {
+						"schema": {
+							"type": "string"
+						}
+					}
+				},
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "schemas/error.schema.json"
+						}
+					}
+				}
+			}
+		}
+	}
+}
