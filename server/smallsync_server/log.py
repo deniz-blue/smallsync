@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import time
+import uuid
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS log (
   key   TEXT    UNIQUE
 );
 CREATE INDEX IF NOT EXISTS log_record ON log (type, id, seq);
+CREATE TABLE IF NOT EXISTS store (uuid TEXT NOT NULL);
 """
 
 MISSING = object()
@@ -37,6 +39,14 @@ def create(path: str) -> None:
     with opened(path) as connection:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.executescript(SCHEMA)
+        connection.execute(
+            "INSERT INTO store (uuid) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM store)",
+            (str(uuid.uuid4()),),
+        )
+
+
+def store_uuid(connection: sqlite3.Connection) -> str:
+    return connection.execute("SELECT uuid FROM store").fetchone()[0]
 
 
 @contextmanager

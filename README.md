@@ -49,11 +49,12 @@ Error responses:
 ### `GET /`
 
 ```json
-{ "$type": "blue.deniz.smallsync#0", "sse": true,
-  "scopes": ["read:*", "write:org.example.note#0"] }
+{ "$type": "blue.deniz.smallsync#0", "uuid": "0f8b6c1e-5d2a-4c7e-9a41-3b6e2f1d8c90",
+  "sse": true, "scopes": ["read:*", "write:org.example.note#0"] }
 ```
 
 - `$type`: the protocol and its version.
+- `uuid`: the store's id. A store that starts over, empty or from a backup, gets a new one.
 - `sse`: whether `/subscribe` exists.
 - `scopes`: what the request may do, with its token or without one ([Tokens](#tokens)).
 
@@ -76,6 +77,7 @@ Clients:
 - leave records of types they don't know alone
 - pull from their last `seq`, or from `0` when new or when their last pull is over a year old,
   keeping their unpushed entries
+- pull from `0` when the store's `uuid` changed, with every record they have as an unpushed `set`
 
 ### `POST /push`
 
@@ -141,9 +143,11 @@ CREATE TABLE log (
   key   TEXT    UNIQUE
 );
 CREATE INDEX log_record ON log (type, id, seq);
+CREATE TABLE store (uuid TEXT NOT NULL);
 ```
 
 - Push: look up the `key`, read the record's entries, apply them, check the new entry, insert it.
 - Pull: select by `seq`.
 - Fold: delete a record's older rows and rewrite the newest.
+- Restoring a backup: give it a new `uuid`.
 - A reference server in Python: [`server/`](server/).

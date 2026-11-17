@@ -5,12 +5,18 @@
 	"type": "object",
 	"required": [
 		"$type",
+		"uuid",
 		"sse",
 		"scopes"
 	],
 	"properties": {
 		"$type": {
 			"const": "blue.deniz.smallsync#0"
+		},
+		"uuid": {
+			"type": "string",
+			"format": "uuid",
+			"description": "The store's id. A store that starts over, empty or from a backup, gets a new one."
 		},
 		"sse": {
 			"type": "boolean",

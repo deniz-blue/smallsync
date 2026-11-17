@@ -50,7 +50,10 @@ changes = Changes()
 
 
 async def store(request: Request) -> JSONResponse:
-    return JSONResponse({"$type": PROTOCOL, "sse": True, "scopes": scopes(request)})
+    allowed = scopes(request)
+    with log.opened(DB) as connection:
+        store_uuid = log.store_uuid(connection)
+    return JSONResponse({"$type": PROTOCOL, "uuid": store_uuid, "sse": True, "scopes": allowed})
 
 
 async def pull(request: Request) -> JSONResponse:

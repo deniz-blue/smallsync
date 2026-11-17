@@ -26,7 +26,7 @@
 		"/": {
 			"get": {
 				"operationId": "getStore",
-				"summary": "The protocol, SSE support and the token's scopes",
+				"summary": "The protocol, the store's id, SSE support and the token's scopes",
 				"responses": {
 					"200": {
 						"description": "The store",
