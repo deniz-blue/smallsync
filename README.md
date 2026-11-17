@@ -35,7 +35,7 @@ The server refuses an entry that doesn't apply, with the `error` in brackets:
   or `patch-failed` for any other operation).
 - `delete` needs the record to exist (`missing`).
 
-A patch tests every path it replaces or removes. Changes to an existing record are patches. Data
+Change an existing record with a patch that tests every path it replaces or removes. Data that
 two devices may edit at once, like a list's items, goes in separate records.
 
 Clients apply pulled entries in `seq` order, with their unpushed ones on top until the push
@@ -47,9 +47,9 @@ The server keeps `history` days of entries. Once a day it folds each record's ol
 one with the newest one's `seq` and `at`: a `set` of their combined value, or a `delete`. A
 `delete` older than a year is dropped.
 
-Clients skip a pulled `delete` of a record they don't have. A device pulls from its last `seq`. A
-new device, or one whose last pull is over a year old, pulls from `0` and keeps its unpushed
-entries.
+Clients skip a pulled `delete` of a record they don't have. Devices pull from their last `seq`,
+except a new device or one whose last pull is over a year old, which pulls from `0` and keeps its
+unpushed entries.
 
 ## API
 
@@ -143,7 +143,7 @@ CREATE INDEX log_record ON log (type, id, seq);
 - Push: look up the `key`, read the record's entries, apply them, check the new entry, insert it.
 - Pull: select by `seq`.
 - Fold: delete a record's older entries, turn the newest into a `set` unless it's a `delete`, and
-  delete `delete` entries older than a year.
+  drop `delete` entries older than a year.
 
 ## Open questions
 
