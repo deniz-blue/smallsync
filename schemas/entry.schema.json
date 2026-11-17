@@ -34,7 +34,6 @@
 			"description": "When the server appended the entry, in Unix milliseconds."
 		}
 	},
-	"additionalProperties": false,
 	"allOf": [
 		{
 			"if": {

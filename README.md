@@ -29,11 +29,12 @@ Clients leave records of types they don't know alone.
 
 ## Applying entries
 
-The server refuses an entry that doesn't apply:
+The server refuses an entry that doesn't apply, with the `error` in brackets:
 
-- `create` needs the record to be missing or deleted.
-- `update` needs the record to exist and every operation in the patch to succeed.
-- `delete` needs the record to exist.
+- `create` needs the record to be missing or deleted (`exists`).
+- `update` needs the record to exist (`missing`) and every operation in the patch to succeed
+  (`test-failed` for a `test`, `patch-failed` for any other).
+- `delete` needs the record to exist (`missing`).
 
 An update tests every path it replaces or removes, so it applies only to the version its author
 saw. Array indexes shift when another entry inserts or removes, so data that two devices may edit
@@ -45,20 +46,27 @@ answers. When one is refused, the client pulls and redoes the change, or asks th
 ## History
 
 The server keeps `history` days of entries. Once a day it folds each record's older entries into
-one `create` holding their combined value, with the `seq` and `at` of the newest. A record that
-was deleted by then loses them all.
+one, with the `seq` and `at` of the newest: a `create` holding their combined value, or a
+`delete` if the record was deleted by then. A `delete` older than a year is dropped.
 
-A new device pulls from `0`. So does a device whose last pull is older than `history` days, which
-rebuilds its records and keeps its unpushed entries. Every other device has already pulled
-whatever gets folded.
+Clients apply a pulled `create` as the record's whole value even when they have the record, and
+skip a `delete` of one they don't have, so a device away for longer than `history` days still
+pulls from its last `seq`. A new device pulls from `0`, and so does one whose last pull is more
+than a year old, which rebuilds its records and keeps its unpushed entries.
 
 ## API
 
 Paths are relative to the store's URL. Bodies are JSON, every request carries
 `Authorization: Bearer <token>`, and `#` is `%23` in query strings. Web clients on another origin
-need CORS to allow `Authorization`.
+need CORS to allow `Authorization`. Clients and servers ignore fields they don't know.
 
-Errors are `{ "error": "…", "message": "…" }` with `400`, `401`, `403` or `413`.
+A request that fails gets `{ "error": "…", "message": "…" }`:
+
+- `invalid` (`400`): the body or query doesn't match its schema
+- `unauthorized` (`401`): the token is missing or bad
+- `forbidden` (`403`): a type the token can't read or write
+- `not-found` (`404`): `/subscribe` on a server without it
+- `too-large` (`413`): the push is too big
 
 ### `GET /`
 
@@ -82,19 +90,23 @@ comes back empty.
 
 ```json
 { "entries": [
-  { "op": "create", "type": "org.example.note#0", "id": "…", "value": { "text": "buy milk" } },
-  { "op": "delete", "type": "org.example.note#0", "id": "…" } ] }
+  { "key": "b1e0…", "op": "create", "type": "org.example.note#0", "id": "…",
+    "value": { "text": "buy milk" } },
+  { "key": "c47a…", "op": "delete", "type": "org.example.note#0", "id": "…" } ] }
 ```
 
-Entries apply in order, and each gets its `seq` or the reason it was refused:
+Entries apply in order, and each gets its `seq` or the reason it was refused
+([Applying entries](#applying-entries)):
 
 ```json
 { "results": [
   { "seq": 436 },
-  { "error": "conflict", "message": "record does not exist" } ] }
+  { "error": "missing", "message": "record does not exist" } ] }
 ```
 
-A type the token can't write fails the whole push with `403`.
+`key` is optional and unique to its entry, so a push can be retried: an entry whose `key` the
+server already has gets that entry's `seq` back and isn't applied again. A type the token can't
+write fails the whole push with `403`.
 
 ### `GET /subscribe?since=<seq>&types=<a,b>`
 
@@ -123,13 +135,16 @@ CREATE TABLE log (
   type  TEXT    NOT NULL,
   id    TEXT    NOT NULL,
   at    INTEGER NOT NULL,
-  value TEXT
+  value TEXT,
+  key   TEXT    UNIQUE
 );
 CREATE INDEX log_record ON log (type, id, seq);
 ```
 
-A push reads the record's entries, applies them, checks the new entry and inserts it. A pull
-selects by `seq`. Folding deletes a record's older entries and turns the newest into the `create`.
+A push looks up the `key`, reads the record's entries, applies them, checks the new entry and
+inserts it. A pull selects by `seq`. Folding deletes a record's older entries and turns the
+newest into the `create`, or keeps it when it's a `delete`. It also removes `delete` entries
+older than a year.
 
 ## Open questions
 

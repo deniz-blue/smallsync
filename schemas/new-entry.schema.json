@@ -8,6 +8,11 @@
 		"id"
 	],
 	"properties": {
+		"key": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Unique to this entry. When the server already has an entry with this key, it answers with that entry's seq and applies nothing."
+		},
 		"op": {
 			"enum": [
 				"create",
@@ -24,7 +29,6 @@
 		},
 		"value": {}
 	},
-	"additionalProperties": false,
 	"allOf": [
 		{
 			"if": {

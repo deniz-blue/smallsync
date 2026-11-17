@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Entry error",
+	"description": "Why a pushed entry was refused, in place of its seq.",
+	"type": "object",
+	"required": [
+		"error",
+		"message"
+	],
+	"properties": {
+		"error": {
+			"enum": [
+				"exists",
+				"missing",
+				"test-failed",
+				"patch-failed"
+			]
+		},
+		"message": {
+			"type": "string"
+		}
+	}
+}

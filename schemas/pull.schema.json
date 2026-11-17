@@ -13,6 +13,5 @@
 				"$ref": "entry.schema.json"
 			}
 		}
-	},
-	"additionalProperties": false
+	}
 }

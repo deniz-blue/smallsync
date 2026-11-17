@@ -21,15 +21,13 @@
 								"type": "integer",
 								"minimum": 1
 							}
-						},
-						"additionalProperties": false
+						}
 					},
 					{
-						"$ref": "error.schema.json"
+						"$ref": "entry-error.schema.json"
 					}
 				]
 			}
 		}
-	},
-	"additionalProperties": false
+	}
 }

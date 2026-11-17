@@ -99,7 +99,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -112,7 +112,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -150,7 +150,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -163,7 +163,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -173,7 +173,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -238,7 +238,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -251,7 +251,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -261,7 +261,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "schemas/error.schema.json"
+									"$ref": "schemas/request-error.schema.json"
 								}
 							}
 						}
@@ -291,7 +291,7 @@
 				"content": {
 					"application/json": {
 						"schema": {
-							"$ref": "schemas/error.schema.json"
+							"$ref": "schemas/request-error.schema.json"
 						}
 					}
 				}

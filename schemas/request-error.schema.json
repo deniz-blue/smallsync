@@ -1,6 +1,7 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"title": "Error",
+	"title": "Request error",
+	"description": "The body of a failed request.",
 	"type": "object",
 	"required": [
 		"error",
@@ -8,11 +9,16 @@
 	],
 	"properties": {
 		"error": {
-			"type": "string"
+			"enum": [
+				"invalid",
+				"unauthorized",
+				"forbidden",
+				"not-found",
+				"too-large"
+			]
 		},
 		"message": {
 			"type": "string"
 		}
-	},
-	"additionalProperties": false
+	}
 }
