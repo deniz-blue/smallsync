@@ -3,11 +3,9 @@ name = "smallsync-server"
 version = "0.1.0"
 description = "Reference server for smallsync"
 requires-python = ">=3.11"
-dependencies = []
-
-[project.scripts]
-smallsync-server = "smallsync_server.__main__:main"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+dependencies = [
+    "jsonpatch",
+    "jsonschema",
+    "starlette",
+    "uvicorn",
+]

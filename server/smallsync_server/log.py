@@ -5,7 +5,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from .patch import PatchError, TestFailed, apply_patch
+import jsonpatch
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS log (
@@ -91,10 +91,10 @@ def apply_entry(current: Any, op: str, value: Any) -> Any:
     if op == "delete":
         return MISSING
     try:
-        return apply_patch(current, value)
-    except TestFailed as failure:
+        return jsonpatch.apply_patch(current, value)
+    except jsonpatch.JsonPatchTestFailed as failure:
         raise EntryRefused("test-failed", str(failure)) from failure
-    except PatchError as failure:
+    except (jsonpatch.JsonPatchException, jsonpatch.JsonPointerException) as failure:
         raise EntryRefused("patch-failed", str(failure)) from failure
 
 
