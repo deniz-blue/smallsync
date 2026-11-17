@@ -16,8 +16,8 @@
 		},
 		"op": {
 			"enum": [
-				"create",
-				"update",
+				"set",
+				"patch",
 				"delete"
 			]
 		},
@@ -39,7 +39,7 @@
 			"if": {
 				"properties": {
 					"op": {
-						"const": "create"
+						"const": "set"
 					}
 				}
 			},
@@ -53,7 +53,7 @@
 			"if": {
 				"properties": {
 					"op": {
-						"const": "update"
+						"const": "patch"
 					}
 				}
 			},

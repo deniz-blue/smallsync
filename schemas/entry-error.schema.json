@@ -10,7 +10,6 @@
 	"properties": {
 		"error": {
 			"enum": [
-				"exists",
 				"missing",
 				"test-failed",
 				"patch-failed"
