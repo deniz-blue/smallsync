@@ -2,9 +2,8 @@
 
 A protocol for syncing one user's typed JSON records through a server. Draft, version 0.
 
-A store is an append-only log. Each entry sets, patches or deletes a record, which has a
-type, an id and a JSON value. Apps share a store by using different types. The server appends
-only entries that apply, and folds entries older than a month.
+A store is an append-only log of entries that set, patch or delete records. A record has a type,
+an id and a JSON value. Apps share a store by using different types.
 
 ## Entries
 
@@ -21,7 +20,7 @@ only entries that apply, and folds entries older than a month.
 - `seq`: the store's counter, set by the server.
 - `op`: `set` with the whole value, `patch` with a
   [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902), or `delete` with no value.
-- `type`: a reverse domain name and a version. A breaking change is a new version, so a new type.
+- `type`: a reverse domain name and a version. A breaking change is a new version.
 - `id`: unique within the type.
 - `at`: when the server appended the entry, in Unix milliseconds.
 
@@ -31,42 +30,42 @@ Clients leave records of types they don't know alone.
 
 The server refuses an entry that doesn't apply, with the `error` in brackets:
 
-- `set` always applies, over whatever was there.
-- `patch` needs the record to exist (`missing`) and every operation in it to succeed
-  (`test-failed` for a `test`, `patch-failed` for any other).
+- `set` always applies.
+- `patch` needs the record to exist (`missing`) and every operation to succeed (`test-failed`,
+  or `patch-failed` for any other operation).
 - `delete` needs the record to exist (`missing`).
 
-A patch tests every path it replaces or removes, so it applies only to the version its author saw.
-A `set` overwrites changes its author hasn't pulled, so a change to a record that exists is a
-patch. Array indexes shift when another entry inserts or removes, so data that two devices may
-edit at once, like a list's items, belongs in separate records.
+A patch tests every path it replaces or removes. Changes to an existing record are patches. Data
+two devices may edit at once, like a list's items, goes in separate records.
 
-Clients apply pulled entries in `seq` order and keep their unpushed ones on top until the push
-answers. When one is refused, the client pulls and redoes the change, or asks the user.
+Clients apply pulled entries in `seq` order, with their unpushed ones on top until the push
+answers. On a refusal, the client pulls and redoes the change, or asks the user.
 
 ## History
 
 The server keeps `history` days of entries. Once a day it folds each record's older entries into
-one, with the `seq` and `at` of the newest: a `set` holding their combined value, or a
-`delete` if the record was deleted by then. A `delete` older than a year is dropped.
+one with the newest one's `seq` and `at`: a `set` of their combined value, or a `delete`. A
+`delete` older than a year is dropped.
 
-A client skips a pulled `delete` of a record it doesn't have, so a device away for longer than
-`history` days still pulls from its last `seq`. A new device pulls from `0`, and so does one whose
-last pull is more than a year old, which rebuilds its records and keeps its unpushed entries.
+Clients skip a pulled `delete` of a record they don't have. A device pulls from its last `seq`. A
+new device, or one whose last pull is over a year old, pulls from `0` and keeps its unpushed
+entries.
 
 ## API
 
 Paths are relative to the store's URL. Bodies are JSON, every request carries
 `Authorization: Bearer <token>`, and `#` is `%23` in query strings. Web clients on another origin
-need CORS to allow `Authorization`. Clients and servers ignore fields they don't know.
+need CORS to allow `Authorization`. Unknown fields are ignored.
 
-A request that fails gets `{ "error": "…", "message": "…" }`:
+A failed request gets `{ "error": "…", "message": "…" }`:
 
-- `invalid` (`400`): the body or query doesn't match its schema
-- `unauthorized` (`401`): the token is missing or bad
-- `forbidden` (`403`): a type the token can't read or write
-- `not-found` (`404`): `/subscribe` on a server without it
-- `too-large` (`413`): the push is too big
+| `error` | Status | When |
+|---|---|---|
+| `invalid` | `400` | the body or query doesn't match its schema |
+| `unauthorized` | `401` | the token is missing or bad |
+| `forbidden` | `403` | a type the token can't read or write |
+| `not-found` | `404` | `/subscribe` on a server without it |
+| `too-large` | `413` | the push is too big |
 
 ### `GET /`
 
@@ -95,8 +94,8 @@ comes back empty.
   { "key": "c47a…", "op": "delete", "type": "org.example.note#0", "id": "…" } ] }
 ```
 
-Entries apply in order, and each gets its `seq` or the reason it was refused
-([Applying entries](#applying-entries)):
+Entries apply in order. Each gets its `seq` or an error from
+[Applying entries](#applying-entries):
 
 ```json
 { "results": [
@@ -104,13 +103,13 @@ Entries apply in order, and each gets its `seq` or the reason it was refused
   { "error": "missing", "message": "record does not exist" } ] }
 ```
 
-`key` is optional and unique to its entry, so a push can be retried: an entry whose `key` the
-server already has gets that entry's `seq` back and isn't applied again. A type the token can't
-write fails the whole push with `403`.
+`key` is optional and unique per entry. An entry whose `key` the server already has gets that
+entry's `seq` and isn't applied again. A type the token can't write fails the whole push with
+`403`.
 
 ### `GET /subscribe?since=<seq>&types=<a,b>`
 
-Server-sent events: what `/pull` returns, then each new entry. The event id is the `seq`, so
+Server-sent events: what `/pull` returns, then each new entry. The event id is the `seq`;
 `Last-Event-ID` resumes.
 
 ```
@@ -123,8 +122,8 @@ data: {"seq":437,"op":"patch","type":"org.example.note#0","id":"…","at":179447
 
 Static tokens or OIDC access tokens checked for signature, `iss`, `aud` and `exp`, as the server
 chooses. A `401` carries `WWW-Authenticate: Bearer resource_metadata="…"`
-([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)) so a client can find the issuer. Scopes are
-`read:<type>`, `write:<type>`, `read:*` and `write:*`.
+([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)). Scopes are `read:<type>`, `write:<type>`,
+`read:*` and `write:*`.
 
 ## Servers
 
@@ -141,10 +140,10 @@ CREATE TABLE log (
 CREATE INDEX log_record ON log (type, id, seq);
 ```
 
-A push looks up the `key`, reads the record's entries, applies them, checks the new entry and
-inserts it. A pull selects by `seq`. Folding deletes a record's older entries and turns the
-newest into the `set`, or keeps it when it's a `delete`. It also removes `delete` entries
-older than a year.
+- Push: look up the `key`, read the record's entries, apply them, check the new entry, insert it.
+- Pull: select by `seq`.
+- Fold: delete a record's older entries, turn the newest into a `set` unless it's a `delete`, and
+  delete `delete` entries older than a year.
 
 ## Open questions
 
