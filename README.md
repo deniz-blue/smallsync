@@ -146,9 +146,4 @@ CREATE INDEX log_record ON log (type, id, seq);
 - Push: look up the `key`, read the record's entries, apply them, check the new entry, insert it.
 - Pull: select by `seq`.
 - Fold: delete a record's older rows and rewrite the newest.
-
-## Open questions
-
-- Type schemas
-- Files
-- A reference server
+- A reference server in Python: [`server/`](server/).

@@ -1,0 +1,6 @@
+{
+	"anonymous": [],
+	"tokens": {
+		"change-me": ["read:*", "write:*"]
+	}
+}
