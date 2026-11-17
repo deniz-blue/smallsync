@@ -49,14 +49,13 @@ Error responses:
 ### `GET /`
 
 ```json
-{ "versions": [0], "history": 30, "subscribe": true,
-  "read": ["*"], "write": ["org.example.note#0"] }
+{ "$type": "blue.deniz.smallsync#0", "sse": true,
+  "scopes": ["read:*", "write:org.example.note#0"] }
 ```
 
-- `versions`: the protocol versions the server speaks.
-- `history`: days of entries kept before folding.
-- `subscribe`: whether `/subscribe` exists.
-- `read`, `write`: the types the token allows.
+- `$type`: the protocol and its version.
+- `sse`: whether `/subscribe` exists.
+- `scopes`: what the request may do, with its token or without one ([Tokens](#tokens)).
 
 ### `GET /pull?since=<seq>&types=<a,b>&limit=<n>`
 
@@ -66,8 +65,8 @@ Error responses:
 
 - Entries after `since` (default `0`), in `seq` order.
 - Pull again from the last `seq` until a page comes back empty.
-- Once a day, each record's entries older than `history` days fold into one, with the newest
-  one's `seq` and `at`: a `set` of their combined value, or a `delete`.
+- Servers may fold a record's older entries into one, with the newest one's `seq` and `at`: a
+  `set` of their combined value, or a `delete`.
 - A `delete` older than a year is dropped.
 
 Clients:
@@ -126,7 +125,8 @@ data: {"seq":437,"op":"patch","type":"org.example.note#0","id":"…","at":179447
   server chooses.
 - A `401` carries `WWW-Authenticate: Bearer resource_metadata="…"`
   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)).
-- Scopes: `read:<type>`, `write:<type>`, `read:*` and `write:*`.
+- Scopes are OAuth scopes: `read:<type>`, `write:<type>`, `read:*` and `write:*`. An OIDC token
+  carries them in its `scope` claim.
 
 ## Servers
 

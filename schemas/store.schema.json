@@ -4,53 +4,23 @@
 	"description": "GET /",
 	"type": "object",
 	"required": [
-		"versions",
-		"history",
-		"subscribe",
-		"read",
-		"write"
+		"$type",
+		"sse",
+		"scopes"
 	],
 	"properties": {
-		"versions": {
+		"$type": {
+			"const": "blue.deniz.smallsync#0"
+		},
+		"sse": {
+			"type": "boolean",
+			"description": "Whether /subscribe exists."
+		},
+		"scopes": {
 			"type": "array",
+			"description": "What the request may do, with its token or without one.",
 			"items": {
-				"type": "integer",
-				"minimum": 0
-			},
-			"minItems": 1
-		},
-		"history": {
-			"type": "integer",
-			"minimum": 1,
-			"description": "Days of entries the server keeps before folding."
-		},
-		"subscribe": {
-			"type": "boolean"
-		},
-		"read": {
-			"type": "array",
-			"items": {
-				"anyOf": [
-					{
-						"const": "*"
-					},
-					{
-						"$ref": "record-type.schema.json"
-					}
-				]
-			}
-		},
-		"write": {
-			"type": "array",
-			"items": {
-				"anyOf": [
-					{
-						"const": "*"
-					},
-					{
-						"$ref": "record-type.schema.json"
-					}
-				]
+				"type": "string"
 			}
 		}
 	}
