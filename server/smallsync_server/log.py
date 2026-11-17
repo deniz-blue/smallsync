@@ -133,7 +133,7 @@ def entry_json(row: tuple) -> dict:
     return entry
 
 
-def fold(connection: sqlite3.Connection, before: int, deletes_before: int) -> None:
+def compact(connection: sqlite3.Connection, before: int, deletes_before: int) -> None:
     with transaction(connection):
         boundary = connection.execute("SELECT max(seq) FROM log WHERE at < ?", (before,)).fetchone()[0]
         if boundary is not None:
@@ -142,11 +142,11 @@ def fold(connection: sqlite3.Connection, before: int, deletes_before: int) -> No
                 (boundary,),
             ).fetchall()
             for record_type, record_id in records:
-                fold_record(connection, record_type, record_id, boundary)
+                compact_record(connection, record_type, record_id, boundary)
         connection.execute("DELETE FROM log WHERE op = 'delete' AND at < ?", (deletes_before,))
 
 
-def fold_record(connection: sqlite3.Connection, record_type: str, record_id: str, boundary: int) -> None:
+def compact_record(connection: sqlite3.Connection, record_type: str, record_id: str, boundary: int) -> None:
     rows = connection.execute(
         "SELECT seq, op, value FROM log WHERE type = ? AND id = ? AND seq <= ? ORDER BY seq",
         (record_type, record_id, boundary),

@@ -1,6 +1,10 @@
 {
-	"anonymous": [],
-	"tokens": {
-		"change-me": ["read:*", "write:*"]
+	"stores": {
+		"deniz": {
+			"anonymous": [],
+			"tokens": {
+				"change-me": ["read:*", "write:*"]
+			}
+		}
 	}
 }
