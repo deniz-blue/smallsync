@@ -3,7 +3,6 @@ import contextlib
 import json
 import os
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -17,7 +16,7 @@ from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
 from . import log
-from .access import Access, allows, load_stores, readable_types
+from .access import Access, allows, readable_types
 from .errors import RequestError
 
 PROTOCOL = "blue.deniz.smallsync#0"
@@ -25,7 +24,8 @@ PAGE_LIMIT = 1000
 PING_SECONDS = 15
 DAY_MS = 86_400_000
 
-DATA = Path(os.environ.get("SMALLSYNC_DATA", "data"))
+ACCESS = Access.load(os.environ["SMALLSYNC_ACCESS"])
+DB = os.environ.get("SMALLSYNC_DB", "smallsync.db")
 HISTORY_DAYS = int(os.environ.get("SMALLSYNC_HISTORY", "30"))
 MAX_BODY = int(os.environ.get("SMALLSYNC_MAX_BODY", str(1 << 20)))
 
@@ -46,20 +46,10 @@ class Changes:
         self.next = asyncio.Event()
 
 
-@dataclass
-class Store:
-    access: Access
-    db: str
-    changes: Changes = field(default_factory=Changes)
+changes = Changes()
 
 
-STORES = {
-    name: Store(access, str(DATA / f"{name}.db"))
-    for name, access in load_stores(os.environ["SMALLSYNC_ACCESS"]).items()
-}
-
-
-async def describe(request: Request) -> JSONResponse:
+async def store(request: Request) -> JSONResponse:
     return JSONResponse({"$type": PROTOCOL, "sse": True, "scopes": scopes(request)})
 
 
@@ -67,12 +57,11 @@ async def pull(request: Request) -> JSONResponse:
     since = query_number(request, "since", 0, 0)
     limit = min(query_number(request, "limit", PAGE_LIMIT, 1), PAGE_LIMIT)
     types = types_to_read(request)
-    with log.opened(store_of(request).db) as connection:
+    with log.opened(DB) as connection:
         return JSONResponse({"entries": log.pull(connection, since, types, limit)})
 
 
 async def push(request: Request) -> JSONResponse:
-    store = store_of(request)
     allowed = scopes(request)
     body = await read_json(request)
     error = best_match(PUSH_REQUEST.iter_errors(body))
@@ -81,9 +70,9 @@ async def push(request: Request) -> JSONResponse:
     for entry in body["entries"]:
         if not allows(allowed, "write", entry["type"]):
             raise refusal(request, f"can't write {entry['type']}")
-    with log.opened(store.db) as connection:
+    with log.opened(DB) as connection:
         results = log.push(connection, body["entries"], log.now())
-    store.changes.announce()
+    changes.announce()
     return JSONResponse({"results": results})
 
 
@@ -91,13 +80,13 @@ async def subscribe(request: Request) -> StreamingResponse:
     last_event_id = request.headers.get("last-event-id")
     since = query_number(request, "since", 0, 0) if last_event_id is None else whole_number(last_event_id, "Last-Event-ID", 0)
     types = types_to_read(request)
-    return StreamingResponse(events(store_of(request), since, types), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+    return StreamingResponse(events(since, types), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
 
-async def events(store: Store, since: int, types: list[str] | None) -> AsyncIterator[str]:
-    with log.opened(store.db) as connection:
+async def events(since: int, types: list[str] | None) -> AsyncIterator[str]:
+    with log.opened(DB) as connection:
         while True:
-            change = store.changes.next
+            change = changes.next
             entries = log.pull(connection, since, types, PAGE_LIMIT)
             for entry in entries:
                 yield f"id: {entry['seq']}\nevent: entry\ndata: {json.dumps(entry, separators=(',', ':'))}\n\n"
@@ -109,15 +98,8 @@ async def events(store: Store, since: int, types: list[str] | None) -> AsyncIter
                     yield ": ping\n\n"
 
 
-def store_of(request: Request) -> Store:
-    name = request.path_params["store"]
-    if name not in STORES:
-        raise RequestError("not-found", f"no store {name}")
-    return STORES[name]
-
-
 def scopes(request: Request) -> list[str]:
-    return store_of(request).access.scopes(request.headers.get("authorization"))
+    return ACCESS.scopes(request.headers.get("authorization"))
 
 
 def refusal(request: Request, message: str) -> RequestError:
@@ -181,17 +163,14 @@ async def not_found(request: Request, error: Exception) -> JSONResponse:
 async def compact_daily() -> None:
     while True:
         at = log.now()
-        for store in STORES.values():
-            with log.opened(store.db) as connection:
-                log.compact(connection, at - HISTORY_DAYS * DAY_MS, at - 365 * DAY_MS)
+        with log.opened(DB) as connection:
+            log.compact(connection, at - HISTORY_DAYS * DAY_MS, at - 365 * DAY_MS)
         await asyncio.sleep(DAY_MS / 1000)
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: Starlette) -> AsyncIterator[None]:
-    DATA.mkdir(parents=True, exist_ok=True)
-    for store in STORES.values():
-        log.create(store.db)
+    log.create(DB)
     compacting = asyncio.create_task(compact_daily())
     yield
     compacting.cancel()
@@ -199,10 +178,10 @@ async def lifespan(app: Starlette) -> AsyncIterator[None]:
 
 app = Starlette(
     routes=[
-        Route("/{store}/", describe),
-        Route("/{store}/pull", pull),
-        Route("/{store}/push", push, methods=["POST"]),
-        Route("/{store}/subscribe", subscribe),
+        Route("/", store),
+        Route("/pull", pull),
+        Route("/push", push, methods=["POST"]),
+        Route("/subscribe", subscribe),
     ],
     middleware=[
         Middleware(

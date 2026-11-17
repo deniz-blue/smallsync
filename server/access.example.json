@@ -1,10 +1,6 @@
 {
-	"stores": {
-		"deniz": {
-			"anonymous": [],
-			"tokens": {
-				"change-me": ["read:*", "write:*"]
-			}
-		}
+	"anonymous": [],
+	"tokens": {
+		"change-me": ["read:*", "write:*"]
 	}
 }

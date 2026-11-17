@@ -1,16 +1,19 @@
 import hmac
 import json
-import re
 
 from .errors import RequestError
-
-STORE_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 
 class Access:
     def __init__(self, anonymous: list[str], tokens: dict[str, list[str]]):
         self.anonymous = anonymous
         self.tokens = tokens
+
+    @classmethod
+    def load(cls, path: str) -> "Access":
+        with open(path) as file:
+            data = json.load(file)
+        return cls(data.get("anonymous", []), data.get("tokens", {}))
 
     def scopes(self, authorization: str | None) -> list[str]:
         if authorization is None:
@@ -31,12 +34,3 @@ def readable_types(scopes: list[str]) -> list[str] | None:
     if "read:*" in scopes:
         return None
     return [scope.removeprefix("read:") for scope in scopes if scope.startswith("read:")]
-
-
-def load_stores(path: str) -> dict[str, Access]:
-    with open(path) as file:
-        stores = json.load(file)["stores"]
-    for name in stores:
-        if not STORE_NAME.fullmatch(name):
-            raise ValueError(f"store names are lowercase letters, digits and dashes: {name}")
-    return {name: Access(store.get("anonymous", []), store.get("tokens", {})) for name, store in stores.items()}
