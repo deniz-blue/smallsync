@@ -18,7 +18,7 @@ A protocol for syncing one user's typed JSON records through a server. Draft, ve
     { "op": "replace", "path": "/done", "value": true } ] }
 ```
 
-- `seq`: the store's counter, set by the server.
+- `seq`: the store's counter, set by the server and never reused.
 - `op`: `set` with the whole value, `patch` with a
   [JSON Patch](https://www.rfc-editor.org/rfc/rfc6902), or `delete` with no value.
 - `type`: a reverse domain name and a version. A breaking change is a new version.
@@ -67,7 +67,7 @@ Error responses:
 - Pull again from the last `seq` until a page comes back empty.
 - Servers may fold a record's older entries into one, with the newest one's `seq` and `at`: a
   `set` of their combined value, or a `delete`.
-- A `delete` older than a year is dropped.
+- A `delete` older than a year is dropped, with the record's entries before it.
 
 Clients:
 
@@ -132,7 +132,7 @@ data: {"seq":437,"op":"patch","type":"org.example.note#0","id":"…","at":179447
 
 ```sql
 CREATE TABLE log (
-  seq   INTEGER PRIMARY KEY,
+  seq   INTEGER PRIMARY KEY AUTOINCREMENT,
   op    TEXT    NOT NULL,
   type  TEXT    NOT NULL,
   id    TEXT    NOT NULL,

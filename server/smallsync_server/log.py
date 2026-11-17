@@ -9,7 +9,7 @@ import jsonpatch
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS log (
-  seq   INTEGER PRIMARY KEY,
+  seq   INTEGER PRIMARY KEY AUTOINCREMENT,
   op    TEXT    NOT NULL,
   type  TEXT    NOT NULL,
   id    TEXT    NOT NULL,
@@ -143,7 +143,13 @@ def compact(connection: sqlite3.Connection, before: int, deletes_before: int) ->
             ).fetchall()
             for record_type, record_id in records:
                 compact_record(connection, record_type, record_id, boundary)
-        connection.execute("DELETE FROM log WHERE op = 'delete' AND at < ?", (deletes_before,))
+        connection.execute(
+            """DELETE FROM log WHERE EXISTS (
+                 SELECT 1 FROM log AS gone
+                 WHERE gone.op = 'delete' AND gone.at < ?
+                   AND gone.type = log.type AND gone.id = log.id AND gone.seq >= log.seq)""",
+            (deletes_before,),
+        )
 
 
 def compact_record(connection: sqlite3.Connection, record_type: str, record_id: str, boundary: int) -> None:
