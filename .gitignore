@@ -1,0 +1,3 @@
+server/build/
+server/smallsync_server.egg-info/
+server/.ruff_cache

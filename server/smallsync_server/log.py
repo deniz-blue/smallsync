@@ -185,4 +185,4 @@ def encode(value: Any) -> str:
 
 
 def decode(text: str | None) -> Any:
-    return None if text is None else json.loads(text)
+    return text and json.loads(text)

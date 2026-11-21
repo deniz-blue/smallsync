@@ -37,5 +37,5 @@ def allows(scopes: list[str], action: str, record_type: str) -> bool:
 
 def readable_types(scopes: list[str]) -> list[str] | None:
     if "read:*" in scopes:
-        return None
+        return
     return [scope.removeprefix("read:") for scope in scopes if scope.startswith("read:")]
