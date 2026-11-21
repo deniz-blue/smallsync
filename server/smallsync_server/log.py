@@ -26,6 +26,10 @@ MISSING = object()
 
 
 class EntryRefused(Exception):
+    __slots__: tuple[str, ...] = ("code",)
+
+    code: str
+
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code

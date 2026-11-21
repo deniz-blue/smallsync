@@ -38,6 +38,10 @@ RECORD_TYPE = Draft202012Validator({"$ref": "record-type.schema.json"}, registry
 
 
 class Changes:
+    __slots__: tuple[str, ...] = ("next",)
+
+    next: asyncio.Event
+
     def __init__(self) -> None:
         self.next = asyncio.Event()
 

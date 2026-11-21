@@ -5,6 +5,11 @@ from .errors import RequestError
 
 
 class Access:
+    __slots__: tuple[str, ...] = ("anonymous", "tokens")
+
+    anonymous: list[str]
+    tokens: dict[str, list[str]]
+
     def __init__(self, anonymous: list[str], tokens: dict[str, list[str]]):
         self.anonymous = anonymous
         self.tokens = tokens
