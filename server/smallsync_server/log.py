@@ -26,6 +26,10 @@ MISSING = object()
 
 
 class EntryRefused(Exception):
+    __slots__: tuple[str, ...] = ("code",)
+
+    code: str
+
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
@@ -181,4 +185,4 @@ def encode(value: Any) -> str:
 
 
 def decode(text: str | None) -> Any:
-    return None if text is None else json.loads(text)
+    return text and json.loads(text)

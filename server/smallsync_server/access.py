@@ -1,13 +1,14 @@
+from dataclasses import dataclass
 import hmac
 import json
 
 from .errors import RequestError
 
 
+@dataclass(repr=False, slots=True)
 class Access:
-    def __init__(self, anonymous: list[str], tokens: dict[str, list[str]]):
-        self.anonymous = anonymous
-        self.tokens = tokens
+    anonymous: list[str]
+    tokens: dict[str, list[str]]
 
     @classmethod
     def load(cls, path: str) -> "Access":
@@ -32,5 +33,5 @@ def allows(scopes: list[str], action: str, record_type: str) -> bool:
 
 def readable_types(scopes: list[str]) -> list[str] | None:
     if "read:*" in scopes:
-        return None
+        return
     return [scope.removeprefix("read:") for scope in scopes if scope.startswith("read:")]

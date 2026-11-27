@@ -8,6 +8,11 @@ STATUS = {
 
 
 class RequestError(Exception):
+    __slots__: tuple[str, ...] = ("code", "status")
+
+    code: str
+    status: int
+
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
